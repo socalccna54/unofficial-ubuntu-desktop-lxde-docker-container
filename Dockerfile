@@ -1,30 +1,43 @@
 FROM ubuntu:latest
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install LXDE (lightweight desktop), VNC, noVNC, and supervisor
-RUN apt-get update \
- && apt-get install -y \
-    lxde-core lxterminal \
-    x11vnc xvfb \
-    websockify novnc \
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
     supervisor \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    lxde \
+    x11vnc \
+    xvfb \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user (optional)
-RUN useradd -m -s /bin/bash ubuntu \
- && echo "ubuntu:ubuntu" | chpasswd \
- && adduser ubuntu sudo
+# Create Supervisor config directory
+RUN mkdir -p /etc/supervisor/conf.d
 
-# Setup noVNC web directory
-RUN mkdir -p /opt/novnc \
- && cp -r /usr/share/novnc/* /opt/novnc/ \
- && ln -s /opt/novnc/vnc.html /opt/novnc/index.html
+# Embed supervisord.conf directly
+RUN echo "[supervisord]\n\
+nodaemon=true\n\
+\n\
+[program:x11vnc]\n\
+command=/usr/bin/x11vnc -forever -usepw -create\n\
+autostart=true\n\
+autorestart=true\n\
+priority=10\n\
+\n\
+[program:xvfb]\n\
+command=/usr/bin/Xvfb :0 -screen 0 1024x768x16\n\
+autostart=true\n\
+autorestart=true\n\
+priority=20\n\
+\n\
+[program:startlxde]\n\
+command=/usr/bin/startlxde\n\
+autostart=true\n\
+autorestart=true\n\
+priority=30\n" \
+> /etc/supervisor/conf.d/supervisord.conf
 
-# Add Supervisor configuration
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Expose VNC port
+EXPOSE 5900
 
-EXPOSE 80 5901
-
-CMD ["/usr/bin/supervisord", "-n"]
+# Start Supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
