@@ -3,27 +3,16 @@ FROM ubuntu:latest
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install LXDE, VNC, Supervisor, git, and utilities
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        lxde-core lxterminal \
-        x11vnc xvfb \
-        supervisor sudo wget curl net-tools git && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends lxde-core lxterminal x11vnc xvfb supervisor sudo wget curl net-tools git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN useradd -m -s /bin/bash ubuntu && \
-    echo "ubuntu:ubuntu" | chpasswd && \
-    adduser ubuntu sudo
+RUN useradd -m -s /bin/bash ubuntu && echo "ubuntu:ubuntu" | chpasswd && adduser ubuntu sudo
 
 # Install noVNC manually
-RUN mkdir -p /opt/novnc && \
-    git clone https://github.com/novnc/noVNC.git /opt/novnc && \
-    git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify && \
-    ln -sf /opt/novnc/vnc.html /opt/novnc/index.html
+RUN mkdir -p /opt/novnc && git clone https://github.com/novnc/noVNC.git /opt/novnc && git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify && ln -sf /opt/novnc/vnc.html /opt/novnc/index.html
 
 # Supervisor config
-RUN mkdir -p /etc/supervisor/conf.d && \
-    echo "[supervisord]\n\
+RUN mkdir -p /etc/supervisor/conf.d && echo "[supervisord]\n\
 nodaemon=true\n\
 \n\
 [program:Xvfb]\n\
