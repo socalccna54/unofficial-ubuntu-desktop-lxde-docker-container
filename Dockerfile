@@ -1,33 +1,27 @@
-# ========================
-# Ubuntu LXDE Desktop Dockerfile, as of today 8-31-25-version-24.04
-# ========================
 FROM ubuntu:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install LXDE, VNC, noVNC, Supervisor and basic utilities
+# Install LXDE, VNC, Supervisor, git, and utilities
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         lxde-core lxterminal \
         x11vnc xvfb \
-        novnc websockify \
-        supervisor sudo wget curl net-tools && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+        supervisor sudo wget curl net-tools git && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
+# Create non-root user
 RUN useradd -m -s /bin/bash ubuntu && \
     echo "ubuntu:ubuntu" | chpasswd && \
     adduser ubuntu sudo
 
-# Setup noVNC web directory
+# Install noVNC manually
 RUN mkdir -p /opt/novnc && \
-    # Copy default noVNC files if they exist
-    cp -r /usr/share/novnc/* /opt/novnc/ 2>/dev/null || true && \
-    cp -r /usr/share/novnc/utils/websockify/* /opt/novnc/ 2>/dev/null || true && \
+    git clone https://github.com/novnc/noVNC.git /opt/novnc && \
+    git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify && \
     ln -sf /opt/novnc/vnc.html /opt/novnc/index.html
 
-# Supervisor config embedded
+# Supervisor config
 RUN mkdir -p /etc/supervisor/conf.d && \
     echo "[supervisord]\n\
 nodaemon=true\n\
@@ -45,7 +39,7 @@ autorestart=true\n\
 priority=20\n\
 \n\
 [program:websockify]\n\
-command=/usr/bin/websockify --web=/opt/novnc 80 localhost:5900\n\
+command=/opt/novnc/utils/websockify/run --web=/opt/novnc 80 localhost:5900\n\
 autostart=true\n\
 autorestart=true\n\
 priority=30\n\
